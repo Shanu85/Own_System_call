@@ -1,0 +1,65 @@
+diff -Naur linux-5.9.1_original/arch/x86/entry/syscalls/syscall_64.tbl linux-5.9.1/arch/x86/entry/syscalls/syscall_64.tbl
+--- linux-5.9.1_original/arch/x86/entry/syscalls/syscall_64.tbl	
++++ linux-5.9.1/arch/x86/entry/syscalls/syscall_64.tbl	
+@@ -361,7 +361,6 @@
+ 437	common	openat2			sys_openat2
+ 438	common	pidfd_getfd		sys_pidfd_getfd
+ 439	common	faccessat2		sys_faccessat2
+-440 common 	sh_task_info	sys_sh_task_info
+
+diff -Naur linux-5.9.1_original/kernel/sys.c linux-5.9.1/kernel/sys.c
+--- linux-5.9.1_original/kernel/sys.c	
++++ linux-5.9.1/kernel/sys.c	
+@@ -2694,52 +2694,4 @@
+ 		return -EFAULT;
+ 	return 0;
+ }
+-int write(char* file_path,char buf[1024],int size)
+-{
+-	struct file *filp=NULL;
+-
+-	filp=filp_open(file_path,O_WRONLY| O_APPEND,0644);
+-	if(IS_ERR(filp))
+-	{
+-		printk(KERN_ALERT "error number in file_input : %ld\n",-PTR_ERR(filp));  // -2 - file not found
+-		return 1;
+-	}
+-	
+-		kernel_write(filp,buf,size,0);
+-		filp_close(filp,NULL);
+-		return 0;
+-	
+-
+-}
+-SYSCALL_DEFINE2(sh_task_info,int,pid,char *,file_path)
+-{	
+-	char data[1024];
+-
+-	struct pid *pid_struct=find_get_pid(pid);
+-	struct task_struct *task=pid_task(pid_struct,PIDTYPE_PID);
+-	if(task==NULL)
+-	{
+-		printk(KERN_ALERT "error number in pid_process : %d\n",ESRCH);  //process not found or was removed.
+-		// error files  - /usr/src/linux-5.9.1/include/uapi/asm-generic
+-		return 1;
+-	}
+-
+-		printk(KERN_INFO "PID of process is %d",task->pid);
+-		printk(KERN_INFO "process name is %s",task->comm);  
+-		printk(KERN_INFO "Process running on the core %u",task->cpu); // tells us current cpu
+-		printk(KERN_INFO "Start time of process %lld",task->start_time);
+-
+-		struct task_struct *parent = task->parent;
+-	    pid_t parent_pid = parent -> pid;           
+-	    printk(KERN_INFO "PID of parent is : %d\n",parent_pid);
+-
+-	    int size = sprintf(data,"PID of process is %d\n" "Process name is %s\n"
+-	    	"Process running on the core %u\n" 
+-	    	"Start time of process %lld \n"
+-	    	"PID of parent is %d\n"
+-	    	,task->pid,task->comm,task->cpu,task->start_time,parent_pid);
+-
+-		printk(KERN_INFO "%s\n","----------------------------");
+-		return write(file_path,data,size);
+-}
+
